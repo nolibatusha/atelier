@@ -1,0 +1,50 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import stat, status_badge %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="stats">
+  {{ stat('Total sales', stats.sales|money, 'Confirmed, shipped & delivered orders') }}
+  {{ stat('Orders', stats.orders, stats.to_fulfil ~ ' to fulfil') }}
+  {{ stat('Customers', stats.customers, 'Registered accounts') }}
+  {{ stat('Products', stats.products, stats.published ~ ' published') }}
+  {{ stat('Avg. order value', stats.aov|int|money) }}
+  {{ stat('Low stock', stats.low_stock, 'Variants at or below threshold', 'warn' if stats.low_stock else '') }}
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Sales overview <small class="muted">last 30 days</small></h2>
+    <p class="muted">{{ totals30.cents|money }} from {{ totals30.n }} order{{ '' if totals30.n == 1 else 's' }}</p>
+  </div>
+  <div class="chart" role="img" aria-label="Daily sales for the last 30 days">
+    {% for p in series %}
+    <div class="bar-col" title="{{ p.date.strftime('%d %b') }}: {{ p.cents|money }} ({{ p.n }} orders)">
+      <span class="bar" style="height:{{ [p.pct, 1 if p.cents else 0]|max }}%"></span>
+      <span class="bar-label">{% if loop.index0 % 5 == 0 %}{{ p.date.strftime('%d/%m') }}{% endif %}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="two-col">
+  <section class="panel">
+    <div class="panel-head"><h2>Recent orders</h2><a href="{{ url_for('admin.orders') }}">View all</a></div>
+    <table class="table"><thead><tr><th>Order</th><th>Customer</th><th>Status</th><th class="r">Total</th></tr></thead><tbody>
+      {% for o in recent %}
+      <tr><td><a href="{{ url_for('admin.order_detail', order_id=o.id) }}">{{ o.number }}</a><br><small class="muted">{{ o.created_at|dt('%d %b, %H:%M') }}</small></td><td>{{ o.ship_name }}</td><td>{{ status_badge(o.status) }}</td><td class="r">{{ o.total_cents|money }}</td></tr>
+      {% else %}<tr><td colspan="4" class="muted">No orders yet.</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Best-selling products</h2></div>
+    <table class="table"><thead><tr><th>Product</th><th class="r">Units</th><th class="r">Revenue</th></tr></thead><tbody>
+      {% for b in best %}
+      <tr><td class="with-thumb"><img src="{{ b.image|img }}" alt="" width="36" height="45"> {{ b.product_name }}</td><td class="r">{{ b.qty }}</td><td class="r">{{ b.revenue|money }}</td></tr>
+      {% else %}<tr><td colspan="3" class="muted">No sales yet.</td></tr>{% endfor %}
+    </tbody></table>
+    <p class="muted small panel-foot">Orders by status:
+      {% for sc in status_counts %}<a href="{{ url_for('admin.orders', status=sc.status) }}">{{ sc.status|status_label }} {{ sc.n }}</a>{{ ' · ' if not loop.last }}{% endfor %}</p>
+  </section>
+</div>
+{% endblock %}

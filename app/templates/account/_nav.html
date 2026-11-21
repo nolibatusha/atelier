@@ -1,0 +1,7 @@
+<nav class="account-nav" aria-label="Account">
+  <a href="{{ url_for('account.dashboard') }}" {% if active == 'dashboard' %}aria-current="page"{% endif %}>Overview</a>
+  <a href="{{ url_for('account.order_list') }}" {% if active == 'orders' %}aria-current="page"{% endif %}>Orders</a>
+  <a href="{{ url_for('account.addresses') }}" {% if active == 'addresses' %}aria-current="page"{% endif %}>Addresses</a>
+  <a href="{{ url_for('account.profile') }}" {% if active == 'profile' %}aria-current="page"{% endif %}>Profile</a>
+  <form method="post" action="{{ url_for('account.logout') }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="link-btn" type="submit">Sign out</button></form>
+</nav>

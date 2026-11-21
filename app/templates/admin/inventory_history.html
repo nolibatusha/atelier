@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import pager %}
+{% block title %}Inventory history{% endblock %}
+{% block content %}
+<div class="actions-row">
+  <form class="filter-bar grow" method="get">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Search product or SKU" aria-label="Search history">
+    <select name="reason" aria-label="Reason"><option value="">All reasons</option>{% for r in reasons %}<option value="{{ r }}" {% if f.reason == r %}selected{% endif %}>{{ r|status_label }}</option>{% endfor %}</select>
+    <button class="btn" type="submit">Filter</button>
+  </form>
+  <a class="btn" href="{{ url_for('admin.inventory_list') }}">← Inventory</a>
+</div>
+<section class="panel flush">
+  <table class="table responsive"><thead><tr><th>When</th><th>Product</th><th>SKU</th><th class="r">Change</th><th class="r">Stock after</th><th>Reason</th><th>By / ref</th></tr></thead><tbody>
+    {% for m in rows %}
+    <tr>
+      <td data-label="When">{{ m.created_at|dt }}</td>
+      <td data-label="Product">{{ m.product_name }}<br><small class="muted">{{ m.variant_desc }}</small></td>
+      <td data-label="SKU"><code>{{ m.sku }}</code></td>
+      <td data-label="Change" class="r {{ 'pos' if m.delta > 0 else 'neg' }}">{{ '+' if m.delta > 0 }}{{ m.delta }}</td>
+      <td data-label="After" class="r">{{ m.stock_after }}</td>
+      <td data-label="Reason">{{ m.reason|status_label }}{% if m.note %}<br><small class="muted">{{ m.note }}</small>{% endif %}</td>
+      <td data-label="By">{% if m.order_number %}<a href="{{ url_for('admin.order_detail', order_id=m.order_id) }}">{{ m.order_number }}</a>{% else %}{{ m.user_name or 'System' }}{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="muted center">No movements recorded.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<p class="muted small">{{ total }} movement{{ '' if total == 1 else 's' }}</p>
+{{ pager(page, pages) }}
+{% endblock %}

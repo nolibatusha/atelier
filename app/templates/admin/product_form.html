@@ -1,0 +1,91 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import csrf %}
+{% block title %}{{ 'Edit product' if p.id else 'New product' }}{% endblock %}
+{% macro variant_row(v) %}
+<tr class="variant-row">
+  <td><input type="hidden" name="v_id" value="{{ v.id if v and v.id else '' }}"><input name="v_size" value="{{ v.size if v else '' }}" maxlength="30" placeholder="M" aria-label="Size"></td>
+  <td><input name="v_color" value="{{ v.color if v else '' }}" maxlength="40" placeholder="Black" aria-label="Colour"></td>
+  <td><input type="color" name="v_hex" value="{{ (v.color_hex if v and v.color_hex else '#cccccc') }}" aria-label="Colour swatch"></td>
+  <td><input name="v_sku" value="{{ v.sku if v else '' }}" maxlength="60" placeholder="auto" aria-label="SKU"></td>
+  <td><input type="number" name="v_stock" value="{{ v.stock if v else '' }}" min="0" max="1000000" placeholder="0" aria-label="Stock"></td>
+  <td><input type="number" name="v_low" value="{{ v.low_stock_threshold if v else 3 }}" min="0" max="10000" aria-label="Low-stock threshold"></td>
+  <td><select name="v_active" aria-label="Active"><option value="1" {% if not v or v.is_active %}selected{% endif %}>Active</option><option value="0" {% if v and not v.is_active %}selected{% endif %}>Hidden</option></select></td>
+  <td><button type="button" class="link-btn danger" data-remove-row>Remove</button></td>
+</tr>
+{% endmacro %}
+{% block content %}
+<p><a href="{{ url_for('admin.products') }}">← All products</a></p>
+{% if errors %}<div class="flash flash-error" role="alert"><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+
+<form method="post" enctype="multipart/form-data" action="{{ url_for('admin.product_edit', product_id=p.id) if p.id else url_for('admin.product_new') }}" class="product-form">
+  {{ csrf() }}
+  <div class="two-col wide-left">
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-head"><h2>Details</h2></div>
+        <div class="field"><label for="name">Name *</label><input id="name" name="name" value="{{ p.name }}" required maxlength="160"></div>
+        <div class="field"><label for="description">Description</label><textarea id="description" name="description" rows="5" maxlength="6000">{{ p.description }}</textarea></div>
+        <div class="field"><label for="details">Materials &amp; care</label><textarea id="details" name="details" rows="3" maxlength="3000">{{ p.details }}</textarea></div>
+        <div class="field"><label for="slug">URL slug <small class="muted">(optional — generated from the name)</small></label><input id="slug" name="slug" value="{{ p.slug }}" maxlength="120"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Images</h2><small class="muted">First image is the main photo. JPG, PNG or WebP, up to 6 MB each.</small></div>
+        {% if images %}
+        <div class="image-grid">
+          {% for im in images %}
+          <div class="img-tile">
+            <img src="{{ im.filename|img }}" alt="" width="120" height="150">
+            <input type="hidden" name="img_id" value="{{ im.id }}">
+            <label>Order <input type="number" name="img_pos" value="{{ im.position }}" min="0" max="999"></label>
+            <label>Alt text <input name="img_alt" value="{{ im.alt }}" maxlength="200"></label>
+            <label class="check"><input type="checkbox" name="img_delete" value="{{ im.id }}"> Delete</label>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="field"><label for="images">Upload new images</label><input id="images" type="file" name="images" accept="image/jpeg,image/png,image/webp" multiple data-image-preview></div>
+        <div class="preview-row" data-preview-target></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Variants &amp; inventory</h2><small class="muted">Each size/colour combination has its own SKU and stock. Stock changes are logged.</small></div>
+        <div class="table-scroll">
+        <table class="table variants-table"><thead><tr><th>Size</th><th>Colour</th><th></th><th>SKU</th><th>Stock</th><th>Low at</th><th>State</th><th></th></tr></thead>
+          <tbody id="variant-rows">
+            {% for v in variants %}{{ variant_row(v) }}{% endfor %}
+            {% if not variants %}{{ variant_row(none) }}{% endif %}
+          </tbody>
+        </table>
+        </div>
+        <button type="button" class="btn btn-sm" data-add-variant>+ Add variant</button>
+        <template id="variant-template">{{ variant_row(none) }}</template>
+        <p class="muted small">Variants that were sold in past orders are hidden rather than deleted so order history stays intact. Leave stock blank on an unused row to ignore it.</p>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-head"><h2>Visibility</h2></div>
+        <label class="check"><input type="checkbox" name="is_published" value="1" {% if p.is_published %}checked{% endif %}> Published (visible in the store)</label>
+        <label class="check"><input type="checkbox" name="is_featured" value="1" {% if p.is_featured %}checked{% endif %}> Featured product</label>
+        <button class="btn btn-primary block" type="submit">Save product</button>
+        {% if p.id %}<a class="btn block" href="{{ url_for('shop.product', slug=p.slug) }}" target="_blank" rel="noopener">View in store ↗</a>{% endif %}
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Pricing</h2></div>
+        <div class="field"><label for="price">Price ({{ s.currency_symbol }}) *</label><input id="price" name="price" inputmode="decimal" value="{{ p.price_in }}" required placeholder="0.00"></div>
+        <div class="field"><label for="sale_price">Sale price ({{ s.currency_symbol }})</label><input id="sale_price" name="sale_price" inputmode="decimal" value="{{ p.sale_in }}" placeholder="Leave blank for no discount"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Organisation</h2></div>
+        <div class="field"><label for="category_id">Category</label>
+          <select id="category_id" name="category_id"><option value="">— None —</option>{% for c in categories %}<option value="{{ c.id }}" {% if p.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+        <fieldset class="field"><legend>Collections</legend>
+          {% for c in collections %}<label class="check"><input type="checkbox" name="collections" value="{{ c.id }}" {% if c.id in p.collection_ids %}checked{% endif %}> {{ c.name }}</label>{% else %}<p class="muted small">No collections yet.</p>{% endfor %}
+        </fieldset>
+      </section>
+    </div>
+  </div>
+</form>
+{% endblock %}

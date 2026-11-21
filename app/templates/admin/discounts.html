@@ -1,0 +1,43 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import csrf %}
+{% block title %}Discount codes{% endblock %}
+{% block content %}
+<div class="two-col wide-left">
+  <section class="panel flush">
+    <table class="table"><thead><tr><th>Code</th><th>Value</th><th>Rules</th><th class="r">Used</th><th>Status</th><th></th></tr></thead><tbody>
+      {% for d in rows %}
+      <tr>
+        <td><strong>{{ d.code }}</strong></td>
+        <td>{% if d.kind == 'percent' %}{{ d.value }}% off{% else %}{{ d.value|money }} off{% endif %}</td>
+        <td><small class="muted">{% if d.min_subtotal_cents %}Min {{ d.min_subtotal_cents|money }}. {% endif %}{% if d.starts_on %}From {{ d.starts_on }}. {% endif %}{% if d.ends_on %}Until {{ d.ends_on }}.{% endif %}{% if not d.min_subtotal_cents and not d.starts_on and not d.ends_on %}No restrictions{% endif %}</small></td>
+        <td class="r">{{ d.used_count }}{% if d.max_uses %} / {{ d.max_uses }}{% endif %}</td>
+        <td><span class="pill {{ 'pill-confirmed' if d.is_active else 'pill-pending' }}">{{ 'Active' if d.is_active else 'Off' }}</span></td>
+        <td class="r nowrap">
+          <form class="inline" method="post">{{ csrf() }}<input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ d.id }}"><button class="btn btn-sm" type="submit">{{ 'Disable' if d.is_active else 'Enable' }}</button></form>
+          <form class="inline" method="post" data-confirm="Delete code {{ d.code }}?">{{ csrf() }}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ d.id }}"><button class="btn btn-sm btn-danger" type="submit">Delete</button></form>
+        </td>
+      </tr>
+      {% else %}<tr><td colspan="6" class="muted center">No discount codes yet.</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>New code</h2></div>
+    <form method="post">{{ csrf() }}<input type="hidden" name="action" value="create">
+      <div class="field"><label for="code">Code *</label><input id="code" name="code" required maxlength="40" placeholder="SPRING15" style="text-transform:uppercase"></div>
+      <div class="grid-2">
+        <div class="field"><label for="kind">Type</label><select id="kind" name="kind"><option value="percent">Percentage</option><option value="fixed">Fixed amount</option></select></div>
+        <div class="field"><label for="value">Value *</label><input id="value" name="value" required inputmode="decimal" placeholder="10 or 15.00"></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label for="min">Min. subtotal ({{ s.currency_symbol }})</label><input id="min" name="min_subtotal" inputmode="decimal" placeholder="0.00"></div>
+        <div class="field"><label for="max">Max. uses</label><input id="max" name="max_uses" type="number" min="1" placeholder="Unlimited"></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label for="from">Starts</label><input id="from" name="starts_on" type="date"></div>
+        <div class="field"><label for="until">Ends</label><input id="until" name="ends_on" type="date"></div>
+      </div>
+      <button class="btn btn-primary block" type="submit">Create code</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

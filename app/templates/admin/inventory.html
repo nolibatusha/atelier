@@ -1,0 +1,45 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import pager, csrf, stat %}
+{% block title %}Inventory{% endblock %}
+{% block content %}
+<div class="stats">
+  {{ stat('Units on hand', summary.units) }}
+  {{ stat('Low stock', summary.low_n or 0, 'At or below threshold', 'warn' if summary.low_n else '') }}
+  {{ stat('Sold out variants', summary.out_n or 0, 'Active variants at zero', 'bad' if summary.out_n else '') }}
+</div>
+<div class="actions-row">
+  <form class="filter-bar grow" method="get">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Search product or SKU" aria-label="Search inventory">
+    <select name="filter" aria-label="Filter"><option value="">All variants</option><option value="low" {% if f.filter == 'low' %}selected{% endif %}>Low stock</option><option value="out" {% if f.filter == 'out' %}selected{% endif %}>Sold out</option></select>
+    <button class="btn" type="submit">Filter</button>
+  </form>
+  <a class="btn" href="{{ url_for('admin.inventory_history') }}">Inventory history →</a>
+</div>
+<section class="panel flush">
+  <table class="table responsive"><thead><tr><th>Product</th><th>Variant</th><th>SKU</th><th class="r">Stock</th><th>Adjust</th></tr></thead><tbody>
+    {% for v in rows %}
+    <tr class="{{ 'row-warn' if v.is_active and v.stock <= v.low_stock_threshold }}">
+      <td data-label="Product"><a href="{{ url_for('admin.product_edit', product_id=v.product_id) }}">{{ v.product_name }}</a></td>
+      <td data-label="Variant">{{ [v.size, v.color]|select|join(' / ') }}{% if not v.is_active %} <span class="pill pill-pending">Hidden</span>{% endif %}</td>
+      <td data-label="SKU"><code>{{ v.sku }}</code></td>
+      <td data-label="Stock" class="r">
+        <strong>{{ v.stock }}</strong>
+        {% if v.is_active and v.stock == 0 %}<span class="pill pill-cancelled">Sold out</span>{% elif v.is_active and v.stock <= v.low_stock_threshold %}<span class="pill pill-pending">Low</span>{% endif %}
+      </td>
+      <td data-label="Adjust">
+        <form class="adjust-form" method="post" action="{{ url_for('admin.inventory_adjust') }}">
+          {{ csrf() }}<input type="hidden" name="variant_id" value="{{ v.id }}"><input type="hidden" name="next" value="{{ request.full_path.rstrip('?') }}">
+          <select name="mode" aria-label="Mode"><option value="add">Add / remove</option><option value="set">Set to</option></select>
+          <input type="number" name="qty" required placeholder="±qty" aria-label="Quantity" style="width:5.5rem">
+          <select name="reason" aria-label="Reason"><option value="restock">Restock</option><option value="correction">Correction</option><option value="damaged">Damaged</option><option value="return">Return</option><option value="stocktake">Stocktake</option></select>
+          <input name="note" placeholder="Note" maxlength="200" aria-label="Note">
+          <button class="btn btn-sm btn-primary" type="submit">Apply</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}<tr><td colspan="5" class="muted center">No variants match.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<p class="muted small">{{ total }} variant{{ '' if total == 1 else 's' }}</p>
+{{ pager(page, pages) }}
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "_macros.html" import product_card, csrf %}
+{% block title %}{{ p.name }} — {{ s.store_name }}{% endblock %}
+{% block meta %}{{ p.description[:155] }}{% endblock %}
+{% block body_class %}has-stickybar{% endblock %}
+{% block content %}
+<div class="pdp">
+  <div class="gallery" data-gallery>
+    {% if p.images|length > 1 %}
+    <div class="thumbs" role="tablist" aria-label="Product images">
+      {% for im in p.images %}<button type="button" class="thumb {% if loop.first %}active{% endif %}" data-src="{{ im.filename|imgw(1080) }}" data-srcset="{{ img_srcset(im.filename, (720,1080,1600)) }}" data-full="{{ im.filename|imgw(1600) }}" aria-label="Show image {{ loop.index }}"><img src="{{ im.filename|imgw(240) }}" alt="" width="120" height="150" loading="lazy" decoding="async"></button>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="stage" data-zoom tabindex="0" role="button" aria-label="Open image in full screen">
+      <img id="stage-img" {{ img_attrs(p.images[0].filename if p.images else '', "(min-width:900px) 55vw, 100vw", (480,720,1080,1600), 1080) }} data-full="{{ (p.images[0].filename if p.images else '')|imgw(1600) }}" fetchpriority="high" alt="{{ p.images[0].alt if p.images and p.images[0].alt else p.name }}" width="1000" height="1250">
+      <span class="zoom-hint" aria-hidden="true">Hover to zoom · click to enlarge</span>
+      {% if p.images|length > 1 %}<span class="swipe-dots" aria-hidden="true">{% for im in p.images %}<i {% if loop.first %}class="on"{% endif %}></i>{% endfor %}</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="pdp-info">
+    <p class="crumbs"><a href="{{ url_for('shop.home') }}">Home</a> / <a href="{{ url_for('shop.shop') }}">Shop</a>{% if p.category_name %} / <a href="{{ url_for('shop.shop', category=p.category_slug) }}">{{ p.category_name }}</a>{% endif %}</p>
+    <h1>{{ p.name }}</h1>
+    <p class="price big">{% if p.on_sale %}<s>{{ p.price_cents|money }}</s> <strong class="sale-price">{{ p.price|money }}</strong> <span class="badge sale">Save {{ ((p.price_cents - p.price) * 100 // p.price_cents) }}%</span>{% else %}{{ p.price|money }}{% endif %}</p>
+    {% if s.tax_enabled %}<p class="muted small">{{ 'Tax included.' if s.tax_inclusive else 'Tax added at checkout.' }}</p>{% endif %}
+
+    <form id="buy" method="post" action="{{ url_for('cart.add') }}" data-buy data-max-line="10">
+      {{ csrf() }}
+      <input type="hidden" name="variant_id" value="" data-variant-input>
+      <input type="hidden" name="next" value="{{ url_for('cart.view') }}">
+
+      {% if p.colors %}
+      <fieldset class="opt-group">
+        <legend>Colour: <span data-color-label></span></legend>
+        <div class="swatch-row">
+          {% for c in p.colors %}<label class="swatch" title="{{ c.name }}"><input type="radio" name="color" value="{{ c.name }}"><span style="background:{{ c.hex or '#ccc' }}"></span><em class="sr">{{ c.name }}</em></label>{% endfor %}
+        </div>
+      </fieldset>
+      {% endif %}
+
+      {% if p.sizes %}
+      <fieldset class="opt-group">
+        <legend>Size {% if footer_pages|selectattr('slug','equalto','size-guide')|list %}<a class="link small" href="{{ url_for('shop.page', slug='size-guide') }}" target="_blank">Size guide</a>{% endif %}</legend>
+        <div class="size-row">
+          {% for sz in p.sizes %}<label class="size"><input type="radio" name="size" value="{{ sz }}"><span>{{ sz }}</span></label>{% endfor %}
+        </div>
+      </fieldset>
+      {% endif %}
+
+      <p class="stock-msg" data-stock aria-live="polite">{% if p.sold_out %}Sold out{% else %}Select {{ 'a size' if p.sizes else 'an option' }}{% endif %}</p>
+
+      <div class="buy-row">
+        <div class="qty" data-qty>
+          <button type="button" aria-label="Decrease quantity" data-qty-minus>−</button>
+          <input type="number" name="quantity" value="1" min="1" max="10" inputmode="numeric" aria-label="Quantity" data-qty-input>
+          <button type="button" aria-label="Increase quantity" data-qty-plus>+</button>
+        </div>
+        <button class="btn btn-dark grow" type="submit" data-add {% if p.sold_out %}disabled{% endif %}>{{ 'Sold out' if p.sold_out else 'Add to bag' }}</button>
+      </div>
+      <button class="btn btn-outline block" type="submit" name="buy_now" value="1" data-buy-now {% if p.sold_out %}disabled{% endif %}>Buy now</button>
+    </form>
+
+    <div class="stickybar buybar" data-buybar hidden>
+      <div class="sb-info"><strong>{{ p.name }}</strong><span>{% if p.on_sale %}<s>{{ p.price_cents|money }}</s> {{ p.price|money }}{% else %}{{ p.price|money }}{% endif %}</span></div>
+      <button class="btn btn-dark" type="button" data-buybar-add {% if p.sold_out %}disabled{% endif %}>{{ 'Sold out' if p.sold_out else 'Add to bag' }}</button>
+    </div>
+
+    <script type="application/json" id="variant-data">{{ variants|tojson }}</script>
+
+    <div class="prose pdp-desc">{{ p.description|paragraphs }}</div>
+    {% if p.details %}
+    <details class="accordion"><summary>Materials &amp; care</summary><div class="prose">{{ p.details|paragraphs }}</div></details>
+    {% endif %}
+    <details class="accordion"><summary>Delivery &amp; returns</summary>
+      <div class="prose"><p>See our <a href="{{ url_for('shop.page', slug='shipping') }}">shipping</a> and <a href="{{ url_for('shop.page', slug='returns') }}">returns</a> information.</p></div>
+    </details>
+  </div>
+</div>
+
+{% if related %}
+<section class="section">
+  <div class="section-head"><h2>You may also like</h2></div>
+  <div class="product-grid four">{% for r in related %}{{ product_card(r) }}{% endfor %}</div>
+</section>
+{% endif %}
+{% endblock %}

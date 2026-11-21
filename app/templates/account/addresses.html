@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Addresses — {{ s.store_name }}{% endblock %}
+{% macro address_fields(a) %}
+  <div class="grid-2">
+    <div class="field"><label>Label</label><input name="label" value="{{ a.label if a else '' }}" maxlength="40" placeholder="Home, Work…"></div>
+    <div class="field"><label>Full name *</label><input name="full_name" value="{{ a.full_name if a else '' }}" required maxlength="120" autocomplete="name"></div>
+  </div>
+  <div class="field"><label>Street address *</label><input name="line1" value="{{ a.line1 if a else '' }}" required maxlength="160" autocomplete="address-line1"></div>
+  <div class="field"><label>Apartment, suite (optional)</label><input name="line2" value="{{ a.line2 if a else '' }}" maxlength="160"></div>
+  <div class="grid-2">
+    <div class="field"><label>City *</label><input name="city" value="{{ a.city if a else '' }}" required maxlength="100"></div>
+    <div class="field"><label>State / region</label><input name="region" value="{{ a.region if a else '' }}" maxlength="100"></div>
+  </div>
+  <div class="grid-2">
+    <div class="field"><label>Postal code</label><input name="postal_code" value="{{ a.postal_code if a else '' }}" maxlength="20"></div>
+    <div class="field"><label>Country *</label>
+      {% if countries %}<select name="country" required><option value="">Choose…</option>{% for c in countries %}<option value="{{ c }}" {% if a and a.country == c %}selected{% elif not a and s.default_country == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+      {% else %}<input name="country" value="{{ a.country if a else s.default_country }}" required maxlength="80">{% endif %}
+    </div>
+  </div>
+  <div class="field"><label>Phone</label><input name="phone" type="tel" value="{{ a.phone if a else '' }}" maxlength="30" autocomplete="tel"></div>
+{% endmacro %}
+{% block content %}
+<section class="page-head"><h1>Saved addresses</h1></section>
+<div class="account-layout">
+  {% set active = 'addresses' %}{% include "account/_nav.html" %}
+  <div>
+    <div class="address-grid">
+      {% for a in addresses %}
+      <div class="card-box">
+        <p><strong>{{ a.label or 'Address' }}</strong> {% if a.is_default %}<span class="pill pill-confirmed">Default</span>{% endif %}</p>
+        <address>{{ a.full_name }}<br>{{ a.line1 }}{% if a.line2 %}<br>{{ a.line2 }}{% endif %}<br>{{ a.postal_code }} {{ a.city }}{% if a.region %}, {{ a.region }}{% endif %}<br>{{ a.country }}{% if a.phone %}<br>{{ a.phone }}{% endif %}</address>
+        <div class="row-actions">
+          {% if not a.is_default %}<form method="post" action="{{ url_for('account.address_default', address_id=a.id) }}">{{ csrf() }}<button class="link-btn" type="submit">Make default</button></form>{% endif %}
+          <form method="post" action="{{ url_for('account.address_delete', address_id=a.id) }}" data-confirm="Remove this address?">{{ csrf() }}<button class="link-btn danger" type="submit">Remove</button></form>
+        </div>
+        <details class="accordion"><summary>Edit</summary>
+          <form method="post" action="{{ url_for('account.address_edit', address_id=a.id) }}">{{ csrf() }}{{ address_fields(a) }}<button class="btn btn-dark btn-sm" type="submit">Save</button></form>
+        </details>
+      </div>
+      {% else %}<p class="muted">No saved addresses yet.</p>{% endfor %}
+    </div>
+    <form class="card-box" method="post" action="{{ url_for('account.addresses') }}">
+      <h2>Add an address</h2>{{ csrf() }}{{ address_fields(none) }}
+      <label class="opt"><input type="checkbox" name="is_default" value="1"> Make this my default address</label>
+      <button class="btn btn-dark" type="submit">Save address</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

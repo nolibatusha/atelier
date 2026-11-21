@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Payment — {{ s.store_name }}{% endblock %}
+{% block content %}
+<section class="page-head"><h1>Complete your payment</h1><p class="muted">Order {{ order.number }}</p></section>
+
+<div class="pay-layout">
+  <div class="sim-card">
+    <div class="sim-banner" role="note">
+      <strong>SIMULATED PAYMENT — DEMO ONLY</strong>
+      <span>This is a test payment provider. No card is charged and no real money moves. Choose an outcome to see how the store handles it.</span>
+    </div>
+
+    {% if error %}
+    <div class="notice error-box" role="alert">
+      <strong>Payment failed.</strong> {{ error }}
+      <p class="small">Your items are reserved for about {{ expiry // 60 }} hour{{ '' if expiry // 60 == 1 else 's' }}. Try again below, or cancel the order to release them.</p>
+    </div>
+    {% endif %}
+
+    <p class="amount">Amount due <strong>{{ order.total_cents|money }}</strong></p>
+    <form method="post" action="{{ url_for('cart.pay', number=order.number) }}" class="sim-actions">
+      {{ csrf() }}
+      <input type="hidden" name="t" value="{{ token }}">
+      <button class="btn btn-dark block" name="outcome" value="success" type="submit">Simulate successful payment</button>
+      <p class="muted small center">— or simulate a failure —</p>
+      <div class="sim-fails">
+        <button class="btn btn-outline" name="outcome" value="declined" type="submit">Card declined</button>
+        <button class="btn btn-outline" name="outcome" value="insufficient_funds" type="submit">Insufficient funds</button>
+        <button class="btn btn-outline" name="outcome" value="error" type="submit">Provider error</button>
+      </div>
+    </form>
+    <form method="post" action="{{ url_for('cart.cancel_unpaid', number=order.number) }}" data-confirm="Cancel this order and release the items?">
+      {{ csrf() }}<input type="hidden" name="t" value="{{ token }}">
+      <button class="link-btn" type="submit">Cancel this order</button>
+    </form>
+  </div>
+
+  <aside class="summary" aria-label="Order summary">
+    <h2>Your order</h2>
+    <ul class="mini-lines">
+      {% for it in items %}
+      <li><span class="mini-img"><img src="{{ it.image|imgw(240) }}" alt="" width="64" height="80"><b>{{ it.quantity }}</b></span>
+          <span><strong>{{ it.product_name }}</strong><small class="muted">{{ [it.size, it.color]|select|join(' / ') }}</small></span><span>{{ it.line_total_cents|money }}</span></li>
+      {% endfor %}
+    </ul>
+    <dl class="totals">
+      <div><dt>Subtotal</dt><dd>{{ order.subtotal_cents|money }}</dd></div>
+      {% if order.discount_cents %}<div class="good"><dt>Discount</dt><dd>−{{ order.discount_cents|money }}</dd></div>{% endif %}
+      <div><dt>Shipping</dt><dd>{{ order.shipping_cents|money if order.shipping_cents else 'Free' }}</dd></div>
+      <div class="grand"><dt>Total</dt><dd>{{ order.total_cents|money }}</dd></div>
+    </dl>
+  </aside>
+</div>
+{% endblock %}

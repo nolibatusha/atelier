@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — {{ s.store_name }}{% endblock %}
+{% block content %}
+<section class="empty big">
+  <p class="eyebrow">Error {{ code }}</p>
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ message }}</p>
+  <a class="btn btn-dark" href="{{ url_for('shop.home') }}">Back to the store</a>
+</section>
+{% endblock %}

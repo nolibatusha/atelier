@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}My orders — {{ s.store_name }}{% endblock %}
+{% block content %}
+<section class="page-head"><h1>My orders</h1></section>
+<div class="account-layout">
+  {% set active = 'orders' %}{% include "account/_nav.html" %}
+  <div class="card-box">
+    {% if orders %}
+    <table class="table responsive"><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Status</th><th>Payment</th><th class="r">Total</th></tr></thead><tbody>
+      {% for o in orders %}
+      <tr>
+        <td data-label="Order"><a href="{{ url_for('account.order_detail', number=o.number) }}">{{ o.number }}</a></td>
+        <td data-label="Date">{{ o.created_at|dt('%d %b %Y') }}</td>
+        <td data-label="Items">{{ o.n_items }}</td>
+        <td data-label="Status">{{ status_badge(o.status) }}</td>
+        <td data-label="Payment"><span class="pill pill-pay-{{ o.payment_status }}">{{ o.payment_status|status_label }}</span></td>
+        <td data-label="Total" class="r">{{ o.total_cents|money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody></table>
+    {% else %}<p class="muted">No orders yet.</p><a class="btn btn-dark" href="{{ url_for('shop.shop') }}">Start shopping</a>{% endif %}
+  </div>
+</div>
+{% endblock %}

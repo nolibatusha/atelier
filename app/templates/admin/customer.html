@@ -1,0 +1,33 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import status_badge, pay_badge, csrf, stat %}
+{% block title %}{{ c.first_name }} {{ c.last_name }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('admin.customers') }}">← All customers</a></p>
+<div class="stats">
+  {{ stat('Orders', orders|length) }}
+  {{ stat('Lifetime spend', spent|money) }}
+  {{ stat('Member since', c.created_at|dt('%d %b %Y')) }}
+  {{ stat('Last sign-in', (c.last_login_at|dt('%d %b %Y')) if c.last_login_at else '—') }}
+</div>
+<div class="two-col">
+  <section class="panel">
+    <div class="panel-head"><h2>Profile</h2></div>
+    <p><strong>{{ c.first_name }} {{ c.last_name }}</strong><br>{{ c.email }}<br>{{ c.phone or 'No phone' }}</p>
+    <h3>Addresses</h3>
+    {% for a in addresses %}<address class="note-box">{{ a.label or 'Address' }}{% if a.is_default %} <span class="pill pill-confirmed">Default</span>{% endif %}<br>{{ a.full_name }}, {{ a.line1 }}{% if a.line2 %}, {{ a.line2 }}{% endif %}<br>{{ a.postal_code }} {{ a.city }}, {{ a.country }}</address>
+    {% else %}<p class="muted">No saved addresses.</p>{% endfor %}
+    {% if c.user_id %}
+    <form method="post" action="{{ url_for('admin.customer_toggle', customer_id=c.id) }}" data-confirm="{{ 'Disable' if c.is_active else 'Enable' }} this account?">
+      {{ csrf() }}<button class="btn {{ 'btn-danger' if c.is_active else '' }}" type="submit">{{ 'Disable account' if c.is_active else 'Enable account' }}</button>
+    </form>
+    {% endif %}
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Order history</h2></div>
+    <table class="table"><thead><tr><th>Order</th><th>Date</th><th>Status</th><th>Payment</th><th class="r">Total</th></tr></thead><tbody>
+      {% for o in orders %}<tr><td><a href="{{ url_for('admin.order_detail', order_id=o.id) }}">{{ o.number }}</a></td><td>{{ o.created_at|dt('%d %b %Y') }}</td><td>{{ status_badge(o.status) }}</td><td>{{ pay_badge(o.payment_status) }}</td><td class="r">{{ o.total_cents|money }}</td></tr>
+      {% else %}<tr><td colspan="5" class="muted">No orders yet.</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+</div>
+{% endblock %}

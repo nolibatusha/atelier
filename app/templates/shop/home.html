@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "_macros.html" import product_card, csrf %}
+{% block body_class %}home{% endblock %}
+{% block content %}
+
+<section class="hero" {% if s.hero_image %}style="--hero:url('{{ s.hero_image|imgw(1600) }}');--hero-sm:url('{{ s.hero_image|imgw(720) }}')"{% endif %}>
+  <div class="hero-image" role="img" aria-label="Featured collection"></div>
+  <div class="hero-copy">
+    {% if s.hero_eyebrow %}<p class="eyebrow">{{ s.hero_eyebrow }}</p>{% endif %}
+    <h1>{{ s.hero_title }}</h1>
+    {% if s.hero_subtitle %}<p class="lead">{{ s.hero_subtitle }}</p>{% endif %}
+    <a class="btn btn-light" href="{{ s.hero_cta_url or url_for('shop.shop') }}">{{ s.hero_cta_label or 'Shop now' }}</a>
+  </div>
+</section>
+
+{% if s.show_collections and collections %}
+<section class="section">
+  <div class="section-head"><h2>Featured collections</h2><a class="link" href="{{ url_for('shop.shop') }}">Shop all</a></div>
+  <div class="collection-grid">
+    {% for c in collections %}
+    <a class="collection-card" href="{{ url_for('shop.shop', collection=c.slug) }}">
+      <img {{ img_attrs(c.image, "(min-width:900px) 25vw, (min-width:700px) 50vw, 100vw", (480,720,1080), 720) }} alt="" loading="lazy" decoding="async" width="800" height="1000">
+      <span class="collection-label"><strong>{{ c.name }}</strong><small>{{ c.description }}</small></span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if s.show_new_arrivals and new %}
+<section class="section">
+  <div class="section-head"><h2>New arrivals</h2><a class="link" href="{{ url_for('shop.shop', sort='newest') }}">View all</a></div>
+  <div class="product-grid">{% for p in new[:8] %}{{ product_card(p) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+{% set promos = (s.promo_banners or [])|selectattr('enabled')|list %}
+{% if s.show_promos and promos %}
+<section class="section promo-grid">
+  {% for b in promos %}
+  <a class="promo" href="{{ b.cta_url or url_for('shop.shop') }}">
+    <img {{ img_attrs(b.image, "(min-width:700px) 50vw, 100vw", (480,720,1080,1600), 720) }} alt="" loading="lazy" decoding="async" width="1400" height="700">
+    <span class="promo-copy">
+      <strong>{{ b.title }}</strong><span>{{ b.text }}</span>
+      {% if b.cta_label %}<em class="btn btn-light btn-sm">{{ b.cta_label }}</em>{% endif %}
+    </span>
+  </a>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if s.show_best_sellers and best %}
+<section class="section">
+  <div class="section-head"><h2>Best sellers</h2><a class="link" href="{{ url_for('shop.shop', sort='popular') }}">View all</a></div>
+  <div class="product-grid four">{% for p in best %}{{ product_card(p) }}{% endfor %}</div>
+</section>
+{% endif %}
+
+{% if s.show_brand_intro and (s.brand_intro_title or s.brand_intro_text) %}
+<section class="section brand-intro">
+  <div class="brand-image"><img {{ img_attrs(s.brand_intro_image, "(min-width:900px) 45vw, 100vw", (480,720,1080), 720) }} alt="" loading="lazy" decoding="async" width="1000" height="1250"></div>
+  <div class="brand-copy">
+    <p class="eyebrow">Our story</p>
+    <h2>{{ s.brand_intro_title }}</h2>
+    <div class="prose">{{ s.brand_intro_text|paragraphs }}</div>
+    {% if footer_pages|selectattr('slug', 'equalto', 'about')|list %}<a class="btn btn-dark" href="{{ url_for('shop.page', slug='about') }}">Learn more</a>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if s.show_instagram and s.instagram_images %}
+<section class="section">
+  <div class="section-head center">
+    <h2>{{ s.instagram_title or 'Follow along' }}</h2>
+    {% if s.instagram_handle %}<p class="muted">{% if s.social_instagram %}<a href="{{ s.social_instagram }}" target="_blank" rel="noopener noreferrer">{{ s.instagram_handle }}</a>{% else %}{{ s.instagram_handle }}{% endif %}</p>{% endif %}
+  </div>
+  <div class="insta-grid">
+    {% for im in s.instagram_images[:6] %}
+    <a href="{{ s.social_instagram or '#' }}" {% if s.social_instagram %}target="_blank" rel="noopener noreferrer"{% endif %} aria-label="Instagram photo {{ loop.index }}"><img {{ img_attrs(im, "(min-width:700px) 16vw, 33vw", (240,320,480), 320) }} alt="" loading="lazy" decoding="async" width="400" height="400"></a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if s.show_newsletter %}
+<section class="section newsletter">
+  <h2>{{ s.newsletter_title }}</h2>
+  {% if s.newsletter_text %}<p class="muted">{{ s.newsletter_text }}</p>{% endif %}
+  <form class="newsletter-form" method="post" action="{{ url_for('shop.newsletter') }}" data-newsletter>
+    {{ csrf() }}
+    <input type="hidden" name="next" value="{{ url_for('shop.home') }}">
+    <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <label class="sr" for="nl-email">Email address</label>
+    <input id="nl-email" type="email" name="email" placeholder="Your email address" required maxlength="254" autocomplete="email">
+    <button class="btn btn-dark" type="submit">Subscribe</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

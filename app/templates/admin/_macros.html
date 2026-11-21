@@ -1,0 +1,18 @@
+{% macro csrf() %}<input type="hidden" name="_csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro status_badge(status) %}<span class="pill pill-{{ status }}">{{ status|status_label }}</span>{% endmacro %}
+{% macro pay_badge(status) %}<span class="pill pill-pay-{{ status }}">{{ status|status_label }}</span>{% endmacro %}
+
+{% macro pager(page, pages) %}
+{% if pages > 1 %}
+<nav class="pager" aria-label="Pagination">
+  {% if page > 1 %}<a href="{{ page_url(page - 1) }}">← Prev</a>{% endif %}
+  <span>Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}<a href="{{ page_url(page + 1) }}">Next →</a>{% endif %}
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro stat(label, value, hint='', tone='') %}
+<div class="stat {{ tone }}"><span class="stat-label">{{ label }}</span><strong>{{ value }}</strong>{% if hint %}<small>{{ hint }}</small>{% endif %}</div>
+{% endmacro %}

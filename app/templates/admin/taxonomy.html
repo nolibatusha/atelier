@@ -1,0 +1,38 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import csrf %}
+{% block title %}{{ label|title }} management{% endblock %}
+{% macro form_fields(r) %}
+  <div class="grid-2">
+    <div class="field"><label>Name *</label><input name="name" value="{{ r.name if r else '' }}" required maxlength="80"></div>
+    <div class="field"><label>Sort order</label><input type="number" name="sort_order" value="{{ r.sort_order if r else 0 }}" min="-1000" max="1000"></div>
+  </div>
+  <div class="field"><label>Description</label><textarea name="description" rows="2" maxlength="600">{{ r.description if r else '' }}</textarea></div>
+  <div class="field"><label>Image (optional)</label><input type="file" name="image" accept="image/jpeg,image/png,image/webp"></div>
+  <label class="check"><input type="checkbox" name="is_active" value="1" {% if not r or r.is_active %}checked{% endif %}> Active (visible)</label>
+  {% if kind == 'collections' %}<label class="check"><input type="checkbox" name="is_featured" value="1" {% if r and r.is_featured %}checked{% endif %}> Featured on the homepage</label>{% endif %}
+{% endmacro %}
+{% block content %}
+<div class="two-col wide-left">
+  <section class="panel flush">
+    <table class="table"><thead><tr><th>{{ label|title }}</th><th class="r">Products</th><th>Status</th><th></th></tr></thead><tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="with-thumb">{% if r.image %}<img src="{{ r.image|img }}" alt="" width="36" height="45">{% endif %}<span><strong>{{ r.name }}</strong><br><small class="muted">/{{ r.slug }}</small></span></td>
+        <td class="r">{{ r.n_products }}</td>
+        <td>{% if r.is_active %}<span class="pill pill-confirmed">Active</span>{% else %}<span class="pill pill-pending">Hidden</span>{% endif %}{% if kind == 'collections' and r.is_featured %} <span class="pill pill-processing">Featured</span>{% endif %}</td>
+        <td class="r nowrap">
+          <details class="inline-edit"><summary class="btn btn-sm">Edit</summary>
+            <form method="post" enctype="multipart/form-data" class="popover">{{ csrf() }}<input type="hidden" name="id" value="{{ r.id }}">{{ form_fields(r) }}<button class="btn btn-primary btn-sm" type="submit">Save</button></form>
+          </details>
+          <form class="inline" method="post" data-confirm="Delete “{{ r.name }}”? Products are kept.">{{ csrf() }}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ r.id }}"><button class="btn btn-sm btn-danger" type="submit">Delete</button></form>
+        </td>
+      </tr>
+      {% else %}<tr><td colspan="4" class="muted center">Nothing here yet.</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Add {{ label }}</h2></div>
+    <form method="post" enctype="multipart/form-data">{{ csrf() }}{{ form_fields(none) }}<button class="btn btn-primary" type="submit">Add {{ label }}</button></form>
+  </section>
+</div>
+{% endblock %}

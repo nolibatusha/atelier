@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, csrf %}
+{% block title %}Profile — {{ s.store_name }}{% endblock %}
+{% block content %}
+<section class="page-head"><h1>Profile</h1></section>
+<div class="account-layout">
+  {% set active = 'profile' %}{% include "account/_nav.html" %}
+  <div>
+    <form class="card-box" method="post" action="{{ url_for('account.profile') }}" novalidate>
+      <h2>Your details</h2>{{ csrf() }}
+      <div class="grid-2">
+        {{ field('first_name', 'First name', request.form.get('first_name', current_customer.first_name), 'text', errors.first_name, True, 'given-name', 60) }}
+        {{ field('last_name', 'Last name', request.form.get('last_name', current_customer.last_name), 'text', '', False, 'family-name', 60) }}
+      </div>
+      <div class="field"><label>Email</label><input value="{{ current_user.email }}" disabled></div>
+      {{ field('phone', 'Phone', request.form.get('phone', current_customer.phone), 'tel', '', False, 'tel', 30) }}
+      <button class="btn btn-dark" type="submit">Save changes</button>
+    </form>
+    <form class="card-box" method="post" action="{{ url_for('account.password') }}" novalidate>
+      <h2>Change password</h2>{{ csrf() }}
+      {{ field('current', 'Current password', '', 'password', '', True, 'current-password', 200) }}
+      <div class="grid-2">
+        {{ field('password', 'New password', '', 'password', '', True, 'new-password', 200, 'At least 8 characters') }}
+        {{ field('password2', 'Confirm new password', '', 'password', '', True, 'new-password', 200) }}
+      </div>
+      <button class="btn btn-dark" type="submit">Update password</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

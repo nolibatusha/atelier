@@ -1,0 +1,84 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import csrf %}
+{% block title %}Store settings{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="settings-form">
+  {{ csrf() }}
+  <div class="two-col">
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-head"><h2>Brand</h2></div>
+        <div class="field"><label for="store_name">Store name</label><input id="store_name" name="store_name" value="{{ cfg.store_name }}" required maxlength="60"></div>
+        <div class="field"><label for="store_tagline">Tagline</label><input id="store_tagline" name="store_tagline" value="{{ cfg.store_tagline }}" maxlength="120"></div>
+        <div class="field"><label for="logo">Logo <small class="muted">(replaces the text wordmark)</small></label>
+          {% if cfg.logo_image %}<div class="logo-preview"><img src="{{ cfg.logo_image|img }}" alt="Current logo"><label class="check"><input type="checkbox" name="remove_logo" value="1"> Remove logo</label></div>{% endif %}
+          <input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp"></div>
+        <div class="color-grid">
+          {% for key, label in [('color_ink','Text / dark'),('color_paper','Background'),('color_accent','Accent'),('color_muted','Muted text')] %}
+          <div class="field"><label for="{{ key }}">{{ label }}</label><input id="{{ key }}" name="{{ key }}" type="color" value="{{ cfg[key] }}"></div>
+          {% endfor %}
+        </div>
+        <div class="field"><label for="meta_description">Search-engine description</label><input id="meta_description" name="meta_description" value="{{ cfg.meta_description }}" maxlength="300"></div>
+        <div class="field"><label for="footer_text">Footer note</label><input id="footer_text" name="footer_text" value="{{ cfg.footer_text }}" maxlength="300"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Contact &amp; social</h2></div>
+        <div class="grid-2">
+          <div class="field"><label for="contact_email">Contact email</label><input id="contact_email" name="contact_email" type="email" value="{{ cfg.contact_email }}" maxlength="254"></div>
+          <div class="field"><label for="contact_phone">Phone</label><input id="contact_phone" name="contact_phone" value="{{ cfg.contact_phone }}" maxlength="40"></div>
+        </div>
+        <div class="field"><label for="store_address">Address</label><input id="store_address" name="store_address" value="{{ cfg.store_address }}" maxlength="200"></div>
+        <div class="grid-2">
+          {% for key, label in [('social_instagram','Instagram URL'),('social_facebook','Facebook URL'),('social_tiktok','TikTok URL'),('social_pinterest','Pinterest URL')] %}
+          <div class="field"><label for="{{ key }}">{{ label }}</label><input id="{{ key }}" name="{{ key }}" type="url" value="{{ cfg[key] }}" maxlength="300" placeholder="https://"></div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-head"><h2>Currency &amp; tax</h2></div>
+        <div class="grid-2">
+          <div class="field"><label for="currency">Currency code</label><input id="currency" name="currency" value="{{ cfg.currency }}" maxlength="3" required style="text-transform:uppercase"></div>
+          <div class="field"><label for="currency_symbol">Symbol</label><input id="currency_symbol" name="currency_symbol" value="{{ cfg.currency_symbol }}" maxlength="4"></div>
+        </div>
+        <label class="check"><input type="checkbox" name="tax_enabled" value="1" {% if cfg.tax_enabled %}checked{% endif %}> Calculate tax</label>
+        <div class="grid-2">
+          <div class="field"><label for="tax_rate">Tax rate (%)</label><input id="tax_rate" name="tax_rate" type="number" step="0.01" min="0" max="60" value="{{ cfg.tax_rate }}"></div>
+          <div class="field"><label for="tax_mode">Prices</label><select id="tax_mode" name="tax_mode"><option value="inclusive" {% if cfg.tax_inclusive %}selected{% endif %}>Include tax</option><option value="exclusive" {% if not cfg.tax_inclusive %}selected{% endif %}>Exclude tax (added at checkout)</option></select></div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label for="order_prefix">Order number prefix</label><input id="order_prefix" name="order_prefix" value="{{ cfg.order_prefix }}" maxlength="6"></div>
+          <div class="field"><label for="exp">Cancel unpaid orders after (min)</label><input id="exp" name="pending_order_expiry_minutes" type="number" min="5" max="10080" value="{{ cfg.pending_order_expiry_minutes }}"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Payment methods</h2></div>
+        {% for m in cfg.payment_methods %}
+        <div class="pm-row">
+          <input type="hidden" name="pm_code" value="{{ m.code }}">
+          <label class="check"><input type="checkbox" name="pm_enabled" value="{{ m.code }}" {% if m.enabled %}checked{% endif %}> <strong>{{ m.code }}</strong>
+            <span class="pill {{ 'pill-demo' if providers[m.provider] and providers[m.provider].is_simulated else '' }}">{{ 'Simulated' if providers[m.provider] and providers[m.provider].is_simulated else m.provider }}</span></label>
+          <div class="grid-2">
+            <div class="field"><label>Label shown to customers</label><input name="pm_label" value="{{ m.label }}" maxlength="60"></div>
+            <div class="field"><label>Description</label><input name="pm_desc" value="{{ m.description }}" maxlength="160"></div>
+          </div>
+        </div>
+        {% endfor %}
+        <p class="muted small">Real providers (Stripe, PayPal…) plug in as code modules in <code>app/payments/</code>, then appear here. The simulated provider never moves money — disable it before launch.</p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Shipping destinations</h2></div>
+        <div class="field"><label for="shipping_countries">Countries you ship to (one per line)</label><textarea id="shipping_countries" name="shipping_countries" rows="6">{{ cfg.shipping_countries|join('\n') }}</textarea></div>
+        <div class="field"><label for="default_country">Default country</label><input id="default_country" name="default_country" value="{{ cfg.default_country }}" maxlength="80"></div>
+        <p class="muted small">Delivery methods and prices are managed under <a href="{{ url_for('admin.shipping') }}">Shipping</a>.</p>
+      </section>
+    </div>
+  </div>
+  <div class="sticky-save"><button class="btn btn-primary" type="submit">Save settings</button></div>
+</form>
+{% endblock %}

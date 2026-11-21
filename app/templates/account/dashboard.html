@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}My account — {{ s.store_name }}{% endblock %}
+{% block content %}
+<section class="page-head"><h1>Hello, {{ current_customer.first_name }}</h1><p class="muted">{{ current_user.email }}</p></section>
+<div class="account-layout">
+  {% set active = 'dashboard' %}{% include "account/_nav.html" %}
+  <div>
+    <div class="stat-row">
+      <div class="card-box"><span class="muted small">Orders</span><strong class="stat">{{ order_count }}</strong></div>
+      <div class="card-box"><span class="muted small">Default address</span>
+        {% if address %}<p class="small">{{ address.full_name }}<br>{{ address.line1 }}, {{ address.city }}<br>{{ address.country }}</p>{% else %}<p class="muted small">None saved yet. <a href="{{ url_for('account.addresses') }}">Add one</a></p>{% endif %}
+      </div>
+    </div>
+    <div class="card-box">
+      <div class="section-head"><h2>Recent orders</h2><a class="link" href="{{ url_for('account.order_list') }}">View all</a></div>
+      {% if recent %}
+      <table class="table responsive"><thead><tr><th>Order</th><th>Date</th><th>Status</th><th class="r">Total</th></tr></thead><tbody>
+        {% for o in recent %}<tr><td data-label="Order"><a href="{{ url_for('account.order_detail', number=o.number) }}">{{ o.number }}</a></td><td data-label="Date">{{ o.created_at|dt('%d %b %Y') }}</td><td data-label="Status">{{ status_badge(o.status) }}</td><td data-label="Total" class="r">{{ o.total_cents|money }}</td></tr>{% endfor %}
+      </tbody></table>
+      {% else %}<p class="muted">You haven't placed any orders yet.</p><a class="btn btn-dark" href="{{ url_for('shop.shop') }}">Start shopping</a>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

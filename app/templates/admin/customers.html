@@ -1,0 +1,26 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import pager %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+<form class="filter-bar" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search name or email" aria-label="Search customers">
+  <button class="btn btn-primary" type="submit">Search</button>
+  {% if q %}<a class="btn" href="{{ url_for('admin.customers') }}">Reset</a>{% endif %}
+</form>
+<section class="panel flush">
+  <table class="table responsive"><thead><tr><th>Customer</th><th>Phone</th><th>Joined</th><th class="r">Orders</th><th class="r">Spent</th><th>Account</th></tr></thead><tbody>
+    {% for c in customers %}
+    <tr>
+      <td data-label="Customer"><a href="{{ url_for('admin.customer_detail', customer_id=c.id) }}"><strong>{{ c.first_name }} {{ c.last_name }}</strong></a><br><small class="muted">{{ c.email }}</small></td>
+      <td data-label="Phone">{{ c.phone or '—' }}</td>
+      <td data-label="Joined">{{ c.created_at|dt('%d %b %Y') }}</td>
+      <td data-label="Orders" class="r">{{ c.n_orders }}</td>
+      <td data-label="Spent" class="r">{{ c.spent|money }}</td>
+      <td data-label="Account">{% if c.is_active == 0 %}<span class="pill pill-cancelled">Disabled</span>{% else %}<span class="pill pill-confirmed">Active</span>{% endif %}</td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="muted center">No customers found.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<p class="muted small">{{ total }} customer{{ '' if total == 1 else 's' }}. Guest shoppers appear in Orders only.</p>
+{{ pager(page, pages) }}
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import pager, csrf %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<div class="actions-row">
+  <form class="filter-bar grow" method="get">
+    <input type="search" name="q" value="{{ f.q }}" placeholder="Search name or SKU" aria-label="Search products">
+    <select name="category" aria-label="Category"><option value="">All categories</option>{% for c in categories %}<option value="{{ c.id }}" {% if f.category == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    <select name="status" aria-label="Status">
+      {% for v, l in [('', 'All products'), ('published', 'Published'), ('draft', 'Drafts'), ('featured', 'Featured'), ('low', 'Low stock')] %}<option value="{{ v }}" {% if f.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit">Filter</button>
+  </form>
+  <a class="btn btn-primary" href="{{ url_for('admin.product_new') }}">+ New product</a>
+</div>
+<section class="panel flush">
+  <table class="table responsive"><thead><tr><th>Product</th><th>Category</th><th class="r">Price</th><th class="r">Stock</th><th>Status</th><th></th></tr></thead><tbody>
+    {% for p in products %}
+    <tr>
+      <td data-label="Product" class="with-thumb"><img src="{{ p.image|img }}" alt="" width="40" height="50"><span><a href="{{ url_for('admin.product_edit', product_id=p.id) }}"><strong>{{ p.name }}</strong></a><br><small class="muted">{{ p.n_variants }} variant{{ '' if p.n_variants == 1 else 's' }}</small></span></td>
+      <td data-label="Category">{{ p.category_name or '—' }}</td>
+      <td data-label="Price" class="r">{% if p.sale_price_cents is not none %}<s class="muted">{{ p.price_cents|money }}</s> {{ p.sale_price_cents|money }}{% else %}{{ p.price_cents|money }}{% endif %}</td>
+      <td data-label="Stock" class="r">{% if p.stock_total == 0 %}<span class="pill pill-cancelled">Out</span>{% else %}{{ p.stock_total }}{% endif %}</td>
+      <td data-label="Status">
+        <form class="inline" method="post" action="{{ url_for('admin.product_toggle', product_id=p.id) }}">{{ csrf() }}<input type="hidden" name="field" value="publish"><button class="pill {{ 'pill-confirmed' if p.is_published else 'pill-pending' }} pill-btn" type="submit" title="Click to {{ 'unpublish' if p.is_published else 'publish' }}">{{ 'Published' if p.is_published else 'Draft' }}</button></form>
+        <form class="inline" method="post" action="{{ url_for('admin.product_toggle', product_id=p.id) }}">{{ csrf() }}<input type="hidden" name="field" value="feature"><button class="pill pill-btn {{ 'pill-processing' if p.is_featured else '' }}" type="submit" title="Toggle featured">{{ '★ Featured' if p.is_featured else '☆' }}</button></form>
+      </td>
+      <td class="r nowrap"><a class="btn btn-sm" href="{{ url_for('admin.product_edit', product_id=p.id) }}">Edit</a>
+        <form class="inline" method="post" action="{{ url_for('admin.product_delete', product_id=p.id) }}" data-confirm="Delete “{{ p.name }}”? Past orders keep their details.">{{ csrf() }}<button class="btn btn-sm btn-danger" type="submit">Delete</button></form></td>
+    </tr>
+    {% else %}<tr><td colspan="6" class="muted center">No products found.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<p class="muted small">{{ total }} product{{ '' if total == 1 else 's' }}</p>
+{{ pager(page, pages) }}
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, csrf %}
+{% block title %}Checkout — {{ s.store_name }}{% endblock %}
+{% block body_class %}has-stickybar{% endblock %}
+{% block content %}
+<section class="page-head"><h1>Checkout</h1></section>
+
+<div class="checkout-layout">
+  <form id="checkout-form" method="post" action="{{ url_for('cart.checkout') }}" class="checkout-form" novalidate data-checkout>
+    {{ csrf() }}
+    {% if errors._form %}<div class="notice error-box" role="alert">{{ errors._form }}</div>{% endif %}
+    {% if errors %}<div class="notice error-box" role="alert">Please correct the highlighted fields.</div>{% endif %}
+
+    <fieldset>
+      <legend>Contact</legend>
+      {% if not current_customer %}<p class="muted small">Checking out as a guest. <a href="{{ url_for('account.login', next=url_for('cart.checkout')) }}">Sign in</a> or <a href="{{ url_for('account.register', next=url_for('cart.checkout')) }}">create an account</a> to save your details.</p>{% endif %}
+      <div class="grid-2">
+        {{ field('email', 'Email', form.email, 'email', errors.email, True, 'email', 254) }}
+        {{ field('phone', 'Phone', form.phone, 'tel', errors.phone, True, 'tel', 30) }}
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Shipping address</legend>
+      {% if addresses %}
+      <div class="field">
+        <label for="saved-address">Saved addresses</label>
+        <select id="saved-address" data-address-picker>
+          <option value="">Enter a different address</option>
+          {% for a in addresses %}<option value="{{ loop.index0 }}" data-name="{{ a.full_name }}" data-line1="{{ a.line1 }}" data-line2="{{ a.line2 }}" data-city="{{ a.city }}" data-region="{{ a.region }}" data-postal="{{ a.postal_code }}" data-country="{{ a.country }}" data-phone="{{ a.phone }}">{{ a.label or a.line1 }} — {{ a.line1 }}, {{ a.city }}</option>{% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      {{ field('ship_name', 'Full name', form.ship_name, 'text', errors.ship_name, True, 'name', 120) }}
+      {{ field('ship_line1', 'Street address', form.ship_line1, 'text', errors.ship_line1, True, 'address-line1', 160) }}
+      {{ field('ship_line2', 'Apartment, suite, etc. (optional)', form.ship_line2, 'text', '', False, 'address-line2', 160) }}
+      <div class="grid-2">
+        {{ field('ship_city', 'City', form.ship_city, 'text', errors.ship_city, True, 'address-level2', 100) }}
+        {{ field('ship_region', 'State / region (optional)', form.ship_region, 'text', '', False, 'address-level1', 100) }}
+      </div>
+      <div class="grid-2">
+        {{ field('ship_postal', 'Postal code', form.ship_postal, 'text', '', False, 'postal-code', 20) }}
+        <div class="field {% if errors.ship_country %}has-error{% endif %}">
+          <label for="f-ship_country">Country <span aria-hidden="true">*</span></label>
+          {% if countries %}
+          <select id="f-ship_country" name="ship_country" required autocomplete="country-name">
+            <option value="">Choose…</option>
+            {% for c in countries %}<option value="{{ c }}" {% if (form.ship_country or s.default_country) == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+          </select>
+          {% else %}<input id="f-ship_country" name="ship_country" value="{{ form.ship_country or s.default_country }}" required maxlength="80">{% endif %}
+          {% if errors.ship_country %}<small class="error">{{ errors.ship_country }}</small>{% endif %}
+        </div>
+      </div>
+      {% if current_customer %}<label class="opt"><input type="checkbox" name="save_address" value="1" {% if form.get('save_address') %}checked{% endif %}> Save this address to my account</label>{% endif %}
+    </fieldset>
+
+    <fieldset class="options">
+      <legend>Delivery method</legend>
+      {% if errors.shipping_method_id %}<small class="error">{{ errors.shipping_method_id }}</small>{% endif %}
+      {% for m in methods %}
+      {% set mq = quotes[m.id] %}
+      <label class="option-card">
+        <input type="radio" name="shipping_method_id" value="{{ m.id }}" {% if selected and selected.id == m.id %}checked{% endif %}
+               data-shipping="{{ mq.shipping|money }}" data-tax="{{ mq.tax|money }}" data-total="{{ mq.total|money }}">
+        <span><strong>{{ m.name }}</strong><small class="muted">{{ m.description }}</small></span>
+        <span class="option-price">{{ 'Free' if mq.shipping == 0 else mq.shipping|money }}</span>
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset class="options">
+      <legend>Payment</legend>
+      {% if errors.payment_method %}<small class="error">{{ errors.payment_method }}</small>{% endif %}
+      {% for m in payment_methods %}
+      <label class="option-card">
+        <input type="radio" name="payment_method" value="{{ m.code }}" {% if (form.get('payment_method') or payment_methods[0].code) == m.code %}checked{% endif %}>
+        <span><strong>{{ m.label }}</strong><small class="muted">{{ m.description }}</small></span>
+        {% if m.provider == 'simulated' %}<span class="pill pill-demo">Demo</span>{% endif %}
+      </label>
+      {% endfor %}
+      <p class="muted small">Demo payments are simulated — no card details are collected and no money is ever charged.</p>
+    </fieldset>
+
+    <div class="field">
+      <label for="f-customer_note">Order notes (optional)</label>
+      <textarea id="f-customer_note" name="customer_note" rows="2" maxlength="500">{{ form.get('customer_note', '') }}</textarea>
+    </div>
+  </form>
+
+  <aside class="summary" aria-label="Order summary">
+    <h2>Order summary</h2>
+    <ul class="mini-lines">
+      {% for l in q.lines %}
+      <li>
+        <span class="mini-img"><img src="{{ l.image|imgw(240) }}" alt="" width="64" height="80"><b>{{ l.quantity }}</b></span>
+        <span><strong>{{ l.name }}</strong><small class="muted">{{ [l.size, l.color]|select|join(' / ') }}</small></span>
+        <span>{{ l.line_cents|money }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <form method="post" action="{{ url_for('cart.discount') }}" class="discount-form">
+      {{ csrf() }}<input type="hidden" name="next" value="{{ url_for('cart.checkout') }}">
+      {% if q.discount_code %}
+        <p class="applied">Code <strong>{{ q.discount_code }}</strong> applied <button class="link-btn" name="remove" value="1" type="submit">Remove</button></p>
+      {% else %}
+        <label class="sr" for="code">Discount code</label>
+        <input id="code" name="code" placeholder="Discount code" maxlength="40" autocomplete="off">
+        <button class="btn btn-ghost btn-sm" type="submit">Apply</button>
+      {% endif %}
+    </form>
+    <dl class="totals">
+      <div><dt>Subtotal</dt><dd>{{ q.subtotal|money }}</dd></div>
+      {% if q.discount %}<div class="good"><dt>Discount ({{ q.discount_code }})</dt><dd>−{{ q.discount|money }}</dd></div>{% endif %}
+      <div><dt>Shipping</dt><dd data-sum-shipping>{{ 'Free' if q.shipping == 0 else q.shipping|money }}</dd></div>
+      {% if s.tax_enabled %}<div class="muted"><dt>{{ 'Includes tax' if q.tax_inclusive else 'Tax' }}</dt><dd data-sum-tax>{{ q.tax|money }}</dd></div>{% endif %}
+      <div class="grand"><dt>Total</dt><dd data-sum-total>{{ q.total|money }}</dd></div>
+    </dl>
+    <button class="btn btn-dark block" type="submit" form="checkout-form">Place order</button>
+    <p class="muted small center">Final prices and stock are re-checked by our server when you place the order.</p>
+  </aside>
+</div>
+<div class="stickybar">
+  <div class="sb-info"><small>Total</small><strong data-sum-total>{{ q.total|money }}</strong></div>
+  <button class="btn btn-dark" type="submit" form="checkout-form">Place order</button>
+</div>
+{% endblock %}

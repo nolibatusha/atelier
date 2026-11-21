@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import csrf %}
+{% block title %}Newsletter subscribers{% endblock %}
+{% block content %}
+<div class="actions-row"><a class="btn btn-primary" href="{{ url_for('admin.newsletter_csv') }}">Export CSV</a><span class="muted">{{ subscribers|length }} subscriber{{ '' if subscribers|length == 1 else 's' }}</span></div>
+<section class="panel flush">
+  <table class="table"><thead><tr><th>Email</th><th>Subscribed</th><th></th></tr></thead><tbody>
+    {% for sub in subscribers %}
+    <tr><td>{{ sub.email }}</td><td>{{ sub.created_at|dt }}</td>
+      <td class="r"><form method="post" action="{{ url_for('admin.newsletter_delete', sub_id=sub.id) }}" data-confirm="Remove {{ sub.email }}?">{{ csrf() }}<button class="link-btn danger" type="submit">Remove</button></form></td></tr>
+    {% else %}<tr><td colspan="3" class="muted center">No subscribers yet.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endblock %}

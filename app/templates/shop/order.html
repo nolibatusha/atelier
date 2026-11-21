@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, csrf %}
+{% block title %}Order {{ order.number }} — {{ s.store_name }}{% endblock %}
+{% block content %}
+{% if back_url %}<p class="crumbs page-crumb"><a href="{{ back_url }}">← All orders</a></p>{% endif %}
+
+{% if placed %}
+<section class="thanks">
+  <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m7.500 12.500 3 3 6-6.500"/></svg>
+  <h1>Thank you for your order</h1>
+  <p class="muted">We've received order <strong>{{ order.number }}</strong>. A confirmation will be sent to {{ order.email }}.</p>
+  {% if not current_customer %}<p class="muted small">Keep this page's address to check your order later.</p>{% endif %}
+</section>
+{% else %}
+<section class="page-head"><h1>Order {{ order.number }}</h1></section>
+{% endif %}
+
+<div class="order-layout">
+  <div>
+    <div class="card-box">
+      <div class="status-row">
+        <div><span class="muted small">Status</span><br>{{ status_badge(order.status) }}</div>
+        <div><span class="muted small">Payment</span><br><span class="pill pill-pay-{{ order.payment_status }}">{{ order.payment_status|status_label }}</span></div>
+        <div><span class="muted small">Placed</span><br>{{ order.created_at|dt }}</div>
+      </div>
+      {% if order.status == 'pending' and order.payment_status != 'paid' and order.payment_provider == 'simulated' %}
+        <p class="notice warn">This order is awaiting payment. <a href="{{ url_for('cart.pay', number=order.number) }}">Complete payment →</a></p>
+      {% endif %}
+      {% if order.tracking_number %}<p><strong>Tracking:</strong> {{ order.carrier }} {{ order.tracking_number }}</p>{% endif %}
+    </div>
+
+    <div class="card-box">
+      <h2>Items</h2>
+      <ul class="order-items">
+        {% for it in items %}
+        <li>
+          <img src="{{ it.image|imgw(240) }}" alt="" width="72" height="90" loading="lazy">
+          <span><strong>{{ it.product_name }}</strong><small class="muted">{{ [it.size, it.color]|select|join(' / ') }} · SKU {{ it.sku }}</small><small class="muted">{{ it.quantity }} × {{ it.unit_price_cents|money }}</small></span>
+          <span>{{ it.line_total_cents|money }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card-box">
+      <h2>Progress</h2>
+      <ol class="timeline">
+        {% for h in history %}<li><strong>{{ h.to_status|status_label }}</strong> <span class="muted small">{{ h.created_at|dt }}</span>{% if h.note %}<br><small class="muted">{{ h.note }}</small>{% endif %}</li>{% endfor %}
+      </ol>
+    </div>
+  </div>
+
+  <aside class="summary">
+    <h2>Summary</h2>
+    <dl class="totals">
+      <div><dt>Subtotal</dt><dd>{{ order.subtotal_cents|money }}</dd></div>
+      {% if order.discount_cents %}<div class="good"><dt>Discount{% if order.discount_code %} ({{ order.discount_code }}){% endif %}</dt><dd>−{{ order.discount_cents|money }}</dd></div>{% endif %}
+      <div><dt>Shipping ({{ order.shipping_method }})</dt><dd>{{ order.shipping_cents|money if order.shipping_cents else 'Free' }}</dd></div>
+      {% if order.tax_cents %}<div class="muted"><dt>{{ 'Includes tax' if order.tax_inclusive else 'Tax' }}</dt><dd>{{ order.tax_cents|money }}</dd></div>{% endif %}
+      <div class="grand"><dt>Total</dt><dd>{{ order.total_cents|money }}</dd></div>
+    </dl>
+    <h3>Ship to</h3>
+    <address>{{ order.ship_name }}<br>{{ order.ship_line1 }}{% if order.ship_line2 %}<br>{{ order.ship_line2 }}{% endif %}<br>{{ order.ship_postal }} {{ order.ship_city }}{% if order.ship_region %}, {{ order.ship_region }}{% endif %}<br>{{ order.ship_country }}</address>
+    <h3>Payment</h3>
+    {% for p in payments %}
+      <p class="small">{{ p.method|replace('_', ' ')|title }} — {{ p.status|status_label }}
+        {% if p.is_simulated %}<span class="pill pill-demo">Simulated · no real money</span>{% endif %}</p>
+    {% else %}<p class="muted small">No payment recorded yet.</p>{% endfor %}
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import csrf %}
+{% block title %}Shipping methods{% endblock %}
+{% macro fields(m) %}
+  <div class="field"><label>Name *</label><input name="name" value="{{ m.name if m else '' }}" required maxlength="80" placeholder="Standard delivery"></div>
+  <div class="field"><label>Description</label><input name="description" value="{{ m.description if m else '' }}" maxlength="160" placeholder="3–5 business days"></div>
+  <div class="grid-2">
+    <div class="field"><label>Price ({{ s.currency_symbol }})</label><input name="price" inputmode="decimal" value="{{ ('%.2f' % (m.price_cents / 100)) if m else '0.00' }}"></div>
+    <div class="field"><label>Free over ({{ s.currency_symbol }})</label><input name="free_over" inputmode="decimal" value="{{ ('%.2f' % (m.free_over_cents / 100)) if m and m.free_over_cents is not none else '' }}" placeholder="Never free"></div>
+  </div>
+  <div class="grid-2">
+    <div class="field"><label>Sort order</label><input type="number" name="sort_order" value="{{ m.sort_order if m else 0 }}"></div>
+    <label class="check"><input type="checkbox" name="is_active" value="1" {% if not m or m.is_active %}checked{% endif %}> Active</label>
+  </div>
+{% endmacro %}
+{% block content %}
+<div class="two-col wide-left">
+  <section class="panel flush">
+    <table class="table"><thead><tr><th>Method</th><th class="r">Price</th><th>Free over</th><th>Status</th><th></th></tr></thead><tbody>
+      {% for m in rows %}
+      <tr>
+        <td><strong>{{ m.name }}</strong><br><small class="muted">{{ m.description }}</small></td>
+        <td class="r">{{ m.price_cents|money }}</td>
+        <td>{{ m.free_over_cents|money if m.free_over_cents is not none else '—' }}</td>
+        <td><span class="pill {{ 'pill-confirmed' if m.is_active else 'pill-pending' }}">{{ 'Active' if m.is_active else 'Off' }}</span></td>
+        <td class="r nowrap">
+          <details class="inline-edit"><summary class="btn btn-sm">Edit</summary>
+            <form method="post" class="popover">{{ csrf() }}<input type="hidden" name="id" value="{{ m.id }}">{{ fields(m) }}<button class="btn btn-primary btn-sm" type="submit">Save</button></form>
+          </details>
+          <form class="inline" method="post" data-confirm="Delete “{{ m.name }}”? Past orders keep their shipping details.">{{ csrf() }}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="{{ m.id }}"><button class="btn btn-sm btn-danger" type="submit">Delete</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody></table>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Add method</h2></div>
+    <form method="post">{{ csrf() }}{{ fields(none) }}<button class="btn btn-primary" type="submit">Add method</button></form>
+  </section>
+</div>
+{% endblock %}

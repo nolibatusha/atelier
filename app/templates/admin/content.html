@@ -1,0 +1,87 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import csrf %}
+{% block title %}Homepage content{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+  {{ csrf() }}
+  <div class="two-col">
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-head"><h2>Announcement bar</h2></div>
+        <label class="check"><input type="checkbox" name="announcement_enabled" value="1" {% if cfg.announcement_enabled %}checked{% endif %}> Show announcement bar</label>
+        <div class="field"><label>Text</label><input name="announcement_text" value="{{ cfg.announcement_text }}" maxlength="160"></div>
+        <div class="field"><label>Link (optional)</label><input name="announcement_link" value="{{ cfg.announcement_link }}" maxlength="300" placeholder="/shop"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Hero</h2></div>
+        <div class="field"><label>Eyebrow</label><input name="hero_eyebrow" value="{{ cfg.hero_eyebrow }}" maxlength="60"></div>
+        <div class="field"><label>Headline</label><input name="hero_title" value="{{ cfg.hero_title }}" maxlength="120"></div>
+        <div class="field"><label>Subtitle</label><textarea name="hero_subtitle" rows="2" maxlength="240">{{ cfg.hero_subtitle }}</textarea></div>
+        <div class="grid-2">
+          <div class="field"><label>Button label</label><input name="hero_cta_label" value="{{ cfg.hero_cta_label }}" maxlength="30"></div>
+          <div class="field"><label>Button link</label><input name="hero_cta_url" value="{{ cfg.hero_cta_url }}" maxlength="300"></div>
+        </div>
+        <div class="field"><label>Hero image <small class="muted">(landscape, ~1920×1080)</small></label>
+          {% if cfg.hero_image %}<img class="admin-preview" src="{{ cfg.hero_image|img }}" alt="Current hero image">{% endif %}
+          <input type="file" name="hero_image" accept="image/jpeg,image/png,image/webp"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Brand introduction</h2></div>
+        <div class="field"><label>Heading</label><input name="brand_intro_title" value="{{ cfg.brand_intro_title }}" maxlength="120"></div>
+        <div class="field"><label>Text <small class="muted">(blank line = new paragraph)</small></label><textarea name="brand_intro_text" rows="6" maxlength="1500">{{ cfg.brand_intro_text }}</textarea></div>
+        <div class="field"><label>Image</label>
+          {% if cfg.brand_intro_image %}<img class="admin-preview" src="{{ cfg.brand_intro_image|img }}" alt="Current brand image">{% endif %}
+          <input type="file" name="brand_intro_image" accept="image/jpeg,image/png,image/webp"></div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-head"><h2>Sections</h2></div>
+        <p class="muted small">Collections shown on the homepage are set via “Featured” in Collections. New arrivals and best sellers come from live product and order data.</p>
+        {% for key, label in [('show_collections','Featured collections'),('show_new_arrivals','New arrivals'),('show_promos','Promotional banners'),('show_best_sellers','Best sellers'),('show_brand_intro','Brand introduction'),('show_instagram','Instagram gallery'),('show_newsletter','Newsletter signup')] %}
+        <label class="check"><input type="checkbox" name="{{ key }}" value="1" {% if cfg[key] %}checked{% endif %}> {{ label }}</label>
+        {% endfor %}
+      </section>
+
+      {% for b in banners %}
+      {% set i = loop.index0 %}
+      <section class="panel">
+        <div class="panel-head"><h2>Promo banner {{ loop.index }}</h2></div>
+        <label class="check"><input type="checkbox" name="promo{{ i }}_enabled" value="1" {% if b.enabled %}checked{% endif %}> Show this banner</label>
+        <div class="field"><label>Title</label><input name="promo{{ i }}_title" value="{{ b.title }}" maxlength="80"></div>
+        <div class="field"><label>Text</label><input name="promo{{ i }}_text" value="{{ b.text }}" maxlength="200"></div>
+        <div class="grid-2">
+          <div class="field"><label>Button label</label><input name="promo{{ i }}_cta_label" value="{{ b.cta_label }}" maxlength="30"></div>
+          <div class="field"><label>Button link</label><input name="promo{{ i }}_cta_url" value="{{ b.cta_url }}" maxlength="300"></div>
+        </div>
+        <div class="field"><label>Image <small class="muted">(2:1, ~1400×700)</small></label>
+          {% if b.image %}<img class="admin-preview" src="{{ b.image|img }}" alt="">{% endif %}
+          <input type="file" name="promo{{ i }}_image" accept="image/jpeg,image/png,image/webp"></div>
+      </section>
+      {% endfor %}
+
+      <section class="panel">
+        <div class="panel-head"><h2>Instagram-style gallery</h2></div>
+        <div class="field"><label>Title</label><input name="instagram_title" value="{{ cfg.instagram_title }}" maxlength="80"></div>
+        <div class="field"><label>Handle</label><input name="instagram_handle" value="{{ cfg.instagram_handle }}" maxlength="60"></div>
+        {% if cfg.instagram_images %}
+        <div class="image-grid small">
+          {% for im in cfg.instagram_images %}<div class="img-tile"><img src="{{ im|img }}" alt="" width="90" height="90"><label class="check"><input type="checkbox" name="ig_delete" value="{{ im }}"> Remove</label></div>{% endfor %}
+        </div>
+        {% endif %}
+        <div class="field"><label>Add photos (max 8 total, square works best)</label><input type="file" name="ig_new" accept="image/jpeg,image/png,image/webp" multiple></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>Newsletter</h2></div>
+        <div class="field"><label>Heading</label><input name="newsletter_title" value="{{ cfg.newsletter_title }}" maxlength="80"></div>
+        <div class="field"><label>Text</label><input name="newsletter_text" value="{{ cfg.newsletter_text }}" maxlength="240"></div>
+      </section>
+    </div>
+  </div>
+  <div class="sticky-save"><button class="btn btn-primary" type="submit">Save homepage</button></div>
+</form>
+{% endblock %}

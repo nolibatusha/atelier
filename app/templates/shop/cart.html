@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Your bag — {{ s.store_name }}{% endblock %}
+{% block body_class %}{% if q and q.lines %}has-stickybar{% endif %}{% endblock %}
+{% block content %}
+<section class="page-head"><h1>Your bag</h1></section>
+
+{% if not q or not q.lines %}
+<div class="empty big">
+  <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+  <h2>Your bag is empty</h2>
+  <p class="muted">Discover something you'll love in our latest collection.</p>
+  <a class="btn btn-dark" href="{{ url_for('shop.shop') }}">Continue shopping</a>
+</div>
+{% else %}
+<div class="cart-layout">
+  <div class="cart-lines">
+    {% if q.blocking %}
+    <div class="notice warn">
+      <p>Some items in your bag changed availability. Review the highlighted items before checking out.</p>
+      <form method="post" action="{{ url_for('cart.fix') }}">{{ csrf() }}<button class="btn btn-dark btn-sm" type="submit">Update bag to available stock</button></form>
+    </div>
+    {% endif %}
+    {% for l in q.lines %}
+    <article class="line {% if l.issue %}has-issue{% endif %}">
+      <a class="line-img" href="{{ url_for('shop.product', slug=l.slug) }}"><img src="{{ l.image|imgw(240) }}" alt="" width="120" height="150" loading="lazy"></a>
+      <div class="line-info">
+        <h3><a href="{{ url_for('shop.product', slug=l.slug) }}">{{ l.name }}</a></h3>
+        {% set opts = variants[l.product_id] %}
+        {% if opts|length > 1 %}
+        <form method="post" action="{{ url_for('cart.change_variant') }}" class="inline-form">
+          {{ csrf() }}<input type="hidden" name="item_id" value="{{ l.item_id }}">
+          <label class="sr" for="v-{{ l.item_id }}">Change option</label>
+          <select id="v-{{ l.item_id }}" name="variant_id" data-autosubmit>
+            {% for o in opts %}<option value="{{ o.id }}" {% if o.id == l.variant_id %}selected{% endif %} {% if o.stock <= 0 and o.id != l.variant_id %}disabled{% endif %}>{{ [o.size, o.color]|select|join(' / ') }}{% if o.stock <= 0 %} — sold out{% endif %}</option>{% endfor %}
+          </select>
+        </form>
+        {% else %}<p class="muted small">{{ [l.size, l.color]|select|join(' / ') }}</p>{% endif %}
+        <p class="muted small">SKU {{ l.sku }}</p>
+        {% if l.issue == 'unavailable' %}<p class="error small">This item is no longer available. Remove it to continue.</p>
+        {% elif l.issue == 'insufficient' %}<p class="error small">Only {{ l.available }} left in stock — please reduce the quantity.</p>
+        {% elif l.available <= 3 %}<p class="warn-text small">Only {{ l.available }} left</p>{% endif %}
+        <div class="line-actions">
+          <form method="post" action="{{ url_for('cart.update') }}" class="inline-form">
+            {{ csrf() }}<input type="hidden" name="item_id" value="{{ l.item_id }}">
+            <label class="sr" for="q-{{ l.item_id }}">Quantity</label>
+            <select id="q-{{ l.item_id }}" name="quantity" data-autosubmit {% if l.issue == 'unavailable' %}disabled{% endif %}>
+              {% for n in range(1, [[l.available, 10]|min, l.quantity]|max + 1) %}<option value="{{ n }}" {% if n == l.quantity %}selected{% endif %}>{{ n }}</option>{% endfor %}
+            </select>
+          </form>
+          <form method="post" action="{{ url_for('cart.remove') }}" class="inline-form">{{ csrf() }}<input type="hidden" name="item_id" value="{{ l.item_id }}"><button class="link-btn" type="submit">Remove</button></form>
+        </div>
+      </div>
+      <p class="line-price">
+        {% if l.unit_cents != l.price_cents %}<s class="muted">{{ l.compare_line_cents|money }}</s><br>{% endif %}
+        <strong>{{ l.line_cents|money }}</strong>
+      </p>
+    </article>
+    {% endfor %}
+    <a class="link" href="{{ url_for('shop.shop') }}">← Continue shopping</a>
+  </div>
+
+  <aside class="summary" aria-label="Order summary">
+    <h2>Order summary</h2>
+    <form method="post" action="{{ url_for('cart.discount') }}" class="discount-form">
+      {{ csrf() }}
+      {% if q.discount_code %}
+        <p class="applied">Code <strong>{{ q.discount_code }}</strong> applied <button class="link-btn" name="remove" value="1" type="submit">Remove</button></p>
+      {% else %}
+        <label class="sr" for="code">Discount code</label>
+        <input id="code" name="code" placeholder="Discount code" value="{{ discount_input }}" maxlength="40" autocomplete="off">
+        <button class="btn btn-ghost btn-sm" type="submit">Apply</button>
+      {% endif %}
+    </form>
+    {% if q.discount_error and discount_input %}<p class="error small">{{ q.discount_error }}</p>{% endif %}
+
+    {% if methods %}
+    <form method="post" action="{{ url_for('cart.shipping') }}" class="ship-select">
+      {{ csrf() }}
+      <label for="ship">Delivery</label>
+      <select id="ship" name="shipping_method_id" data-autosubmit>
+        {% for m in methods %}<option value="{{ m.id }}" {% if q.shipping_method and q.shipping_method.id == m.id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+      </select>
+    </form>
+    {% endif %}
+
+    <dl class="totals">
+      <div><dt>Subtotal</dt><dd>{{ q.subtotal|money }}</dd></div>
+      {% if q.savings %}<div class="good"><dt>Sale savings</dt><dd>−{{ q.savings|money }} (already applied)</dd></div>{% endif %}
+      {% if q.discount %}<div class="good"><dt>Discount ({{ q.discount_code }})</dt><dd>−{{ q.discount|money }}</dd></div>{% endif %}
+      <div><dt>Shipping</dt><dd>{% if q.shipping %}{{ q.shipping|money }}{% else %}Free{% endif %}</dd></div>
+      {% if s.tax_enabled %}<div class="muted"><dt>{{ 'Includes tax' if q.tax_inclusive else 'Tax' }} ({{ s.tax_rate|round(1)|string|replace('.0','') }}%)</dt><dd>{{ q.tax|money }}</dd></div>{% endif %}
+      <div class="grand"><dt>Total</dt><dd>{{ q.total|money }}</dd></div>
+    </dl>
+    {% if q.amount_to_free_shipping %}<p class="free-ship">Add {{ q.amount_to_free_shipping|money }} more for free shipping.</p>{% endif %}
+
+    {% if q.blocking %}
+      <button class="btn btn-dark block" type="button" disabled>Resolve highlighted items to check out</button>
+    {% else %}
+      <a class="btn btn-dark block" href="{{ url_for('cart.checkout') }}">Checkout</a>
+    {% endif %}
+    <p class="muted small center">Prices and stock are confirmed again at checkout.</p>
+  </aside>
+</div>
+<div class="stickybar">
+  <div class="sb-info"><small>Total</small><strong>{{ q.total|money }}</strong></div>
+  {% if q.blocking %}<a class="btn btn-dark" href="#main">Review items</a>{% else %}<a class="btn btn-dark" href="{{ url_for('cart.checkout') }}">Checkout</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

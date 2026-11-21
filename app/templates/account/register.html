@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, csrf %}
+{% block title %}Create account — {{ s.store_name }}{% endblock %}
+{% block content %}
+<section class="auth">
+  <h1>Create your account</h1>
+  <form method="post" action="{{ url_for('account.register', next=request.args.get('next')) }}" novalidate>
+    {{ csrf() }}
+    <div class="grid-2">
+      {{ field('first_name', 'First name', form.get('first_name', ''), 'text', errors.first_name, True, 'given-name', 60) }}
+      {{ field('last_name', 'Last name', form.get('last_name', ''), 'text', '', False, 'family-name', 60) }}
+    </div>
+    {{ field('email', 'Email', form.get('email', ''), 'email', errors.email, True, 'email', 254) }}
+    {{ field('phone', 'Phone (optional)', form.get('phone', ''), 'tel', '', False, 'tel', 30) }}
+    {{ field('password', 'Password', '', 'password', errors.password, True, 'new-password', 200, 'At least 8 characters') }}
+    {{ field('password2', 'Confirm password', '', 'password', errors.password2, True, 'new-password', 200) }}
+    <button class="btn btn-dark block" type="submit">Create account</button>
+  </form>
+  <p class="muted center">Already registered? <a href="{{ url_for('account.login', next=request.args.get('next')) }}">Sign in</a></p>
+</section>
+{% endblock %}

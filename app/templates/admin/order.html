@@ -1,0 +1,90 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import status_badge, pay_badge, csrf %}
+{% block title %}Order {{ o.number }}{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('admin.orders') }}">← All orders</a></p>
+<div class="order-grid">
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head"><h2>Items</h2><span>{{ status_badge(o.status) }} {{ pay_badge(o.payment_status) }}</span></div>
+      <table class="table"><thead><tr><th>Product</th><th>SKU</th><th class="r">Price</th><th class="r">Qty</th><th class="r">Total</th></tr></thead><tbody>
+        {% for it in items %}
+        <tr><td class="with-thumb"><img src="{{ it.image|img }}" alt="" width="36" height="45"> <span>{{ it.product_name }}<br><small class="muted">{{ [it.size, it.color]|select|join(' / ') }}</small></span></td><td>{{ it.sku }}</td><td class="r">{{ it.unit_price_cents|money }}</td><td class="r">{{ it.quantity }}</td><td class="r">{{ it.line_total_cents|money }}</td></tr>
+        {% endfor %}
+      </tbody></table>
+      <dl class="totals">
+        <div><dt>Subtotal</dt><dd>{{ o.subtotal_cents|money }}</dd></div>
+        {% if o.discount_cents %}<div><dt>Discount {% if o.discount_code %}({{ o.discount_code }}){% endif %}</dt><dd>−{{ o.discount_cents|money }}</dd></div>{% endif %}
+        <div><dt>Shipping — {{ o.shipping_method }}</dt><dd>{{ o.shipping_cents|money }}</dd></div>
+        {% if o.tax_cents %}<div><dt>{{ 'Tax (included)' if o.tax_inclusive else 'Tax' }}</dt><dd>{{ o.tax_cents|money }}</dd></div>{% endif %}
+        <div class="grand"><dt>Total ({{ o.currency }})</dt><dd>{{ o.total_cents|money }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Payments</h2></div>
+      <table class="table"><thead><tr><th>Date</th><th>Provider</th><th>Reference</th><th>Status</th><th class="r">Amount</th></tr></thead><tbody>
+        {% for p in payments %}
+        <tr><td>{{ p.created_at|dt }}</td><td>{{ p.provider }} {% if p.is_simulated %}<span class="pill pill-demo">Simulated</span>{% endif %}</td><td>{{ p.provider_ref }}{% if p.failure_reason %}<br><small class="muted">{{ p.failure_reason }}</small>{% endif %}</td><td>{{ p.status|status_label }}</td><td class="r">{{ p.amount_cents|money }}</td></tr>
+        {% else %}<tr><td colspan="5" class="muted">No payment attempts.</td></tr>{% endfor %}
+      </tbody></table>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>History</h2></div>
+      <ol class="timeline">
+        {% for h in history %}<li><strong>{{ h.to_status|status_label }}</strong> <small class="muted">{{ h.created_at|dt }}{% if h.user_name %} · {{ h.user_name }}{% endif %}</small>{% if h.note %}<br><small>{{ h.note }}</small>{% endif %}</li>{% endfor %}
+      </ol>
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="panel">
+      <div class="panel-head"><h2>Update status</h2></div>
+      {% if allowed %}
+      <form method="post" action="{{ url_for('admin.order_status', order_id=o.id) }}">
+        {{ csrf() }}
+        <div class="field"><label for="st">Move to</label>
+          <select id="st" name="status">{% for st in allowed %}<option value="{{ st }}">{{ st|status_label }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="note">Note (optional)</label><input id="note" name="note" maxlength="300"></div>
+        <button class="btn btn-primary block" type="submit">Update status</button>
+        <p class="muted small">Cancelling returns reserved stock. Cancelling or refunding a paid order marks the payment as refunded.</p>
+      </form>
+      {% else %}<p class="muted">This order is {{ o.status }} — no further status changes are possible.</p>{% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Customer</h2></div>
+      <p><strong>{{ o.ship_name }}</strong><br>{{ o.email }}<br>{{ o.phone }}</p>
+      {% if customer %}<p><a href="{{ url_for('admin.customer_detail', customer_id=customer.id) }}">View customer profile →</a></p>{% else %}<p class="muted small">Guest checkout</p>{% endif %}
+      {% if o.customer_note %}<p class="note-box"><strong>Customer note:</strong> {{ o.customer_note }}</p>{% endif %}
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Shipping information</h2></div>
+      {% set editable = o.status in ('pending','confirmed','processing') %}
+      <form method="post" action="{{ url_for('admin.order_shipping', order_id=o.id) }}">
+        {{ csrf() }}
+        <div class="field"><label>Name</label><input name="ship_name" value="{{ o.ship_name }}" {% if not editable %}readonly{% endif %} maxlength="120"></div>
+        <div class="field"><label>Street</label><input name="ship_line1" value="{{ o.ship_line1 }}" {% if not editable %}readonly{% endif %} maxlength="160"></div>
+        <div class="field"><label>Line 2</label><input name="ship_line2" value="{{ o.ship_line2 }}" {% if not editable %}readonly{% endif %} maxlength="160"></div>
+        <div class="grid-2">
+          <div class="field"><label>City</label><input name="ship_city" value="{{ o.ship_city }}" {% if not editable %}readonly{% endif %} maxlength="100"></div>
+          <div class="field"><label>Postal</label><input name="ship_postal" value="{{ o.ship_postal }}" {% if not editable %}readonly{% endif %} maxlength="20"></div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Region</label><input name="ship_region" value="{{ o.ship_region }}" {% if not editable %}readonly{% endif %} maxlength="100"></div>
+          <div class="field"><label>Country</label><input name="ship_country" value="{{ o.ship_country }}" {% if not editable %}readonly{% endif %} maxlength="80"></div>
+        </div>
+        <div class="grid-2">
+          <div class="field"><label>Carrier</label><input name="carrier" value="{{ o.carrier }}" maxlength="60" placeholder="DHL, UPS…"></div>
+          <div class="field"><label>Tracking number</label><input name="tracking_number" value="{{ o.tracking_number }}" maxlength="80"></div>
+        </div>
+        <div class="field"><label>Internal note</label><textarea name="admin_note" rows="2" maxlength="1000">{{ o.admin_note }}</textarea></div>
+        <button class="btn btn-primary" type="submit">Save</button>
+        {% if not editable %}<p class="muted small">The address is locked once an order has shipped.</p>{% endif %}
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

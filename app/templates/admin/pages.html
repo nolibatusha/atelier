@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import csrf %}
+{% block title %}Pages &amp; policies{% endblock %}
+{% block content %}
+<div class="two-col wide-left">
+  <section class="panel">
+    <div class="panel-head"><h2>{{ 'Edit “' ~ current.title ~ '”' if current else 'New page' }}</h2>{% if current %}<a href="{{ url_for('admin.pages') }}">+ New page</a>{% endif %}</div>
+    <form method="post">
+      {{ csrf() }}<input type="hidden" name="original_slug" value="{{ current.slug if current else '' }}">
+      <div class="grid-2">
+        <div class="field"><label>Title *</label><input name="title" value="{{ current.title if current else '' }}" required maxlength="120"></div>
+        <div class="field"><label>Address <small class="muted">/pages/…</small></label><input name="slug" value="{{ current.slug if current else '' }}" maxlength="60" {% if current %}readonly{% endif %} placeholder="auto"></div>
+      </div>
+      <div class="field"><label>Content <small class="muted">(plain text; a blank line starts a new paragraph)</small></label><textarea name="body" rows="14" maxlength="20000">{{ current.body if current else '' }}</textarea></div>
+      <div class="grid-2">
+        <label class="check"><input type="checkbox" name="show_in_footer" value="1" {% if not current or current.show_in_footer %}checked{% endif %}> Show in footer</label>
+        <div class="field"><label>Footer order</label><input type="number" name="sort_order" value="{{ current.sort_order if current else 0 }}"></div>
+      </div>
+      <button class="btn btn-primary" type="submit">Save page</button>
+    </form>
+  </section>
+  <section class="panel flush">
+    <table class="table"><thead><tr><th>Page</th><th></th></tr></thead><tbody>
+      {% for r in rows %}
+      <tr><td><a href="{{ url_for('admin.pages', edit=r.slug) }}">{{ r.title }}</a><br><small class="muted">/pages/{{ r.slug }}</small></td>
+        <td class="r nowrap"><a class="btn btn-sm" href="{{ url_for('shop.page', slug=r.slug) }}" target="_blank" rel="noopener">View</a>
+          <form class="inline" method="post" data-confirm="Delete “{{ r.title }}”?">{{ csrf() }}<input type="hidden" name="action" value="delete"><input type="hidden" name="slug" value="{{ r.slug }}"><button class="btn btn-sm btn-danger" type="submit">Delete</button></form></td></tr>
+      {% endfor %}
+    </tbody></table>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% from "admin/_macros.html" import status_badge, pay_badge, pager %}
+{% block title %}Orders{% endblock %}
+{% block content %}
+<form class="filter-bar" method="get">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="Search order #, email or name" aria-label="Search orders">
+  <select name="status" aria-label="Status"><option value="">All statuses</option>{% for st in statuses %}<option value="{{ st }}" {% if f.status == st %}selected{% endif %}>{{ st|status_label }}</option>{% endfor %}</select>
+  <select name="payment" aria-label="Payment"><option value="">Any payment</option>{% for st in ['unpaid','paid','failed','refunded'] %}<option value="{{ st }}" {% if f.payment == st %}selected{% endif %}>{{ st|status_label }}</option>{% endfor %}</select>
+  <label>From <input type="date" name="from" value="{{ f.from }}"></label>
+  <label>To <input type="date" name="to" value="{{ f.to }}"></label>
+  <button class="btn btn-primary" type="submit">Filter</button>
+  <a class="btn" href="{{ url_for('admin.orders') }}">Reset</a>
+</form>
+<section class="panel flush">
+  <table class="table responsive"><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Status</th><th>Payment</th><th class="r">Total</th></tr></thead><tbody>
+    {% for o in orders %}
+    <tr>
+      <td data-label="Order"><a href="{{ url_for('admin.order_detail', order_id=o.id) }}"><strong>{{ o.number }}</strong></a></td>
+      <td data-label="Date">{{ o.created_at|dt }}</td>
+      <td data-label="Customer">{{ o.ship_name }}<br><small class="muted">{{ o.email }}{% if not o.customer_id %} · guest{% endif %}</small></td>
+      <td data-label="Items">{{ o.n_items }}</td>
+      <td data-label="Status">{{ status_badge(o.status) }}</td>
+      <td data-label="Payment">{{ pay_badge(o.payment_status) }}</td>
+      <td data-label="Total" class="r">{{ o.total_cents|money }}</td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="muted center">No orders match.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<p class="muted small">{{ total }} order{{ '' if total == 1 else 's' }}</p>
+{{ pager(page, pages) }}
+{% endblock %}
