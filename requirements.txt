@@ -1,0 +1,6 @@
+Flask>=3.0
+Pillow>=10.0
+# Dev/test only
+pytest>=8.0
+# Production WSGI server (not used by `manage.py run`):
+gunicorn>=22.0

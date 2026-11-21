@@ -1,0 +1,26 @@
+# Render blueprint: one-click demo deployment (https://render.com -> New -> Blueprint).
+# Demo mode: the database is rebuilt with demo data on every deploy (free plans have no persistent disk).
+# For the real store, switch to a paid plan with a disk and stop running `reset` in the build.
+services:
+  - type: web
+    name: sare-store-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python manage.py reset
+    startCommand: gunicorn wsgi:app --workers 2 --threads 4 --timeout 60 --bind 0.0.0.0:$PORT
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: TRUSTED_PROXIES
+        value: "1"
+      - key: ALLOW_SIMULATED_PAYMENTS   # demo only: lets the client try the simulated checkout
+        value: "1"
+      - key: ADMIN_EMAIL
+        value: admin@example.com
+      - key: ADMIN_PASSWORD             # random; read it in the Render dashboard -> Environment
+        generateValue: true
